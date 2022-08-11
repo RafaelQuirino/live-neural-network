@@ -1,0 +1,9 @@
+version: "3.7"
+
+services:
+
+  live-neural-network:
+    build: '.'
+    hostname: livenn
+    volumes:
+      - ./app:/app

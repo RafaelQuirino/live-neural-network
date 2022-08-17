@@ -6,14 +6,39 @@
   </head>
   <body>
     <script src="bundle.js"></script>
-    <canvas id="mycanvas1" width="740" height="640">
-        Sorry, browser does not support canvas.
-    </canvas>
-    <canvas id="mycanvas2">
-        Sorry, browser does not support canvas.
-    </canvas>
-    <div id="chartjsDiv">
-      <canvas id="myChart"></canvas>
+    <!-- <div id="container-2" class="container2">
+      <canvas id="mycanvas1" width="780" height="640">
+          Sorry, browser does not support canvas.
+      </canvas>
+      <canvas id="mycanvas2">
+          Sorry, browser does not support canvas.
+      </canvas>
+      <div id="chartjsDiv">
+        <canvas id="myChart"></canvas>
+      </div>
+      <div id="chartjsDiv">
+        <canvas id="myChart2"></canvas>
+      </div>
+    </div> -->
+
+    <div id="container">
+      <div id="controls"></div>
+      <div id="graphics">
+        <div id="neuralnet">
+          <canvas id="neuralnetcanvas"></canvas>
+        </div>
+        <div id="charts">
+          <div id="info">
+            <canvas id="infocanvas"></canvas>
+          </div>
+          <div id="cost">
+            <canvas id="costcanvas"></canvas>
+          </div>
+          <div id="accuracy">
+            <canvas id="accuracycanvas"></canvas>
+          </div>
+        </div>
+      </div>
     </div>
   </body>
 </html>

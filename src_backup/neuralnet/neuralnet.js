@@ -117,7 +117,7 @@ let NeuralNetwork = function (topology)
 	
 	this.rms_rate            = 0.9;
 	this.momentum_rate       = 0.9;
-	this.learning_rate       = 0.005;
+	this.learning_rate       = 0.001;
 	this.regularization_rate = 0.0001;
 
 	// Setting output layer's activation
@@ -1070,7 +1070,7 @@ let nn_hyperbolic_tangent = function (k)
 let nn_hyperbolic_tangent_prime = function (k)
 {
 	let x = k;
-	let y = 1 - Math.pow(Math.tanh(x),2);
+	let y = 1 - pow(tanh(x),2);
 	return y;
 }
 // //---------------------------------------------------------

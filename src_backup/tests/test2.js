@@ -31,7 +31,6 @@ import {
     Tooltip,
     SubTitle
 } from 'chart.js';
-import { max } from 'lodash';
   
 Chart.register(
     ArcElement,
@@ -61,17 +60,18 @@ Chart.register(
 );
 
 
-function drawChart (xData, yData1, yData2, max, canvasId, divId, label1, label2)
+function drawChart (xData, yData1, yData2, max)
 {
-    let elem = document.getElementById(canvasId);
+    let elem = document.getElementById("myChart");
     elem.parentNode.removeChild(elem);
 
-    let div = document.getElementById(divId);
+    let div = document.getElementById('chartjsDiv');
     let canvas = document.createElement('canvas');
-    canvas.id = canvasId;
+    canvas.id = "myChart";
+    canvas.classList.add('myChart');
     div.appendChild(canvas);
 
-    let ctx = document.getElementById(canvasId);
+    let ctx = document.getElementById('myChart');
     
     let myChart = new Chart(ctx, {
         type: 'line',
@@ -79,7 +79,7 @@ function drawChart (xData, yData1, yData2, max, canvasId, divId, label1, label2)
             labels: xData,
             datasets: [
                 {
-                    label: label1,
+                    label: 'Batch cost (%50)',
                     data: yData1,
                     backgroundColor: [
                         'rgba(255, 99, 132, 0.2)'
@@ -90,8 +90,8 @@ function drawChart (xData, yData1, yData2, max, canvasId, divId, label1, label2)
                     borderWidth: 1
                 },
                 {
-                    label: label2,
-                    // fill: true,
+                    label: 'SMA50',
+                    fill: true,
                     data: yData2,
                     backgroundColor: [
                         'rgba(132, 99, 255, 0.2)'
@@ -106,12 +106,11 @@ function drawChart (xData, yData1, yData2, max, canvasId, divId, label1, label2)
         options: {
             pointRadius: 0,
             elements: { point: { radius: 0 } },
-            maintainAspectRatio: false,
-            responsive: true,
+            maintainAspectRatio: true,
+            responsive: false,
             scales: {
                 y: {
                     min: 0,
-                    max: max,
                     ticks: { 
                         // color: 'white', 
                         beginAtZero: true 
@@ -135,7 +134,7 @@ function renderNeuralNetwork (g, nn1) // GFX object, NeuralNetwork object
     g.clear();
 
     // Graphics datastructure
-    let layers = [];
+    // let layers = [];
     
     // Graphics parameters
     let numlanes = nn1.nlayers;
@@ -143,9 +142,9 @@ function renderNeuralNetwork (g, nn1) // GFX object, NeuralNetwork object
     let vpadding = 40;
     let yi = vpadding, yf = g.height - vpadding;
     let uheight = yf - yi;
-    let inputvportion = 0.4;
+    let inputvportion = 0.5;
     let inputwportion = 0.2;
-    let neuronmaxradius = 16;
+    let neuronmaxradius = 15;
     
     // Lanes middle points (x values)
     let xvalues = [];
@@ -166,38 +165,28 @@ function renderNeuralNetwork (g, nn1) // GFX object, NeuralNetwork object
     // | Drawing lanes and middle lines |
     // +--------------------------------+
     //===================================================================================
-    if (true) {
-        let lanes = [];
-        for (let i = 0; i < numlanes; i++) {
-            lanes.push(new g.Rectangle(i*lanewidth,0, lanewidth-1,g.height-1));
-            lanes[i].color(255, 0, 0);
-        }
-
-        let lines = [];
-        for (let i = 0; i < numlanes; i++) {
-            lines.push(new g.Line(xvalues[i],vpadding, xvalues[i],g.height-vpadding));
-            lines[i].color(0, 255, 0);
-        }
-        
-        // Input rectangle
-        let halfwidth = lanewidth * 0.5 * inputwportion;
-        let x = xvalues[0] - halfwidth;
-        let y = vpadding + uheight * (1.0-inputvportion) * 0.5;
-        let r = new g.Rectangle(x, y, halfwidth * 2, uheight* inputvportion);
-        r.color(0, 0, 255);
-
-        // Hidden layers rectangles
-        for (let i = 1; i < nn1.topology.length - 1; i++) {
-            console.log('Layer ' + i + ': ' 
-                + (nn1.topology[i] * neuronmaxradius * 3 + neuronmaxradius) + ', '
-                + (uheight)
-            );
-            let xhid = xvalues[i] - halfwidth;
-            let yhid = vpadding ;
-            let rhid = new g.Rectangle(xhid, yhid, halfwidth * 2, uheight);
-            rhid.color(0, 0, 255);
-        }
+    let lanes = [];
+    for (let i = 0; i < numlanes; i++) {
+        lanes.push(new g.Rectangle(i*lanewidth,0, lanewidth-1,g.height-1));
+        lanes[i].color(255, 0, 0);
     }
+
+    let lines = [];
+    for (let i = 0; i < numlanes; i++) {
+        lines.push(new g.Line(xvalues[i],vpadding, xvalues[i],g.height-vpadding));
+        lines[i].color(0, 255, 0);
+    }
+    
+    // Input rectangle
+    let halfwidth = lanewidth * 0.5 * inputwportion;
+    let x = xvalues[0] - halfwidth, y = vpadding + uheight * (1.0-inputvportion) * 0.5;
+    let r = new g.Rectangle(x, y, halfwidth * 2, uheight* inputvportion);
+    r.color(0, 0, 255);
+
+    // Hidden layers rectangles
+
+    // Output layer rectangle
+
     //===================================================================================
 
     function createInputRect (gfx, x, y, width, height) {
@@ -228,59 +217,17 @@ function renderNeuralNetwork (g, nn1) // GFX object, NeuralNetwork object
         else
             curry += inputheight * 0.5;
         let side = Math.min(hw * 2, inputheight * 0.5);
-        inputs.push({
-            center: {
-                x: xvalues[0],
-                y: curry + side * 0.5
-            },
-            rect: createInputRect(
-                g,
-                xvalues[0] - side * 0.5,
-                curry,
-                side,
-                side
-            )
-        });
+        inputs.push(createInputRect(
+            g,
+            xvalues[0] - side * 0.5,
+            curry,
+            side,
+            side
+        ));
         curry += inputheight * 0.5;
     }
 
     // Rendering hidden layers
-    let maxnumneurons = Math.max(...nn1.topology);
-    if (maxnumneurons * neuronmaxradius * 3 + neuronmaxradius > uheight)
-        neuronmaxradius = uheight / (3 * maxnumneurons + 1);
-    for (let i = 1; i < nn1.topology.length - 1; i++) {
-        layers.push({
-            neurons: [],
-            synapses: []
-        });
-        let numneurons = nn1.topology[i];
-        let hx = xvalues[i];
-        let hy = vpadding + neuronmaxradius * 2;
-        if (numneurons * neuronmaxradius * 3 + neuronmaxradius >= uheight) {
-            uheighthid = numneurons * neuronmaxradius * 3 + neuronmaxradius;
-        }
-        hy += 0.5 * (uheight - (numneurons * neuronmaxradius * 3 + neuronmaxradius));
-        // First draw synapses
-        for (let j = 0; j < nn1.topology[j]; j++) {
-            // let p1;
-            // if (j == 0)
-        }
-        // And then draw the neurons
-        for (let j = 0; j < numneurons; j++) {
-            let hidneuron = new g.Circle(
-                hx, 
-                hy, 
-                neuronmaxradius
-            );
-            hidneuron.style(g.FILL);
-            hidneuron.color(0, 0, 255);
-            hidneuron.renderBorder(true);
-            hidneuron.borderColor(0, 0, 0);
-            hidneuron.borderThickness(1);
-            
-            hy += neuronmaxradius * 3;
-        }
-    }
 
     // Rendering output layer
     let outputneuron = new g.Circle(
@@ -298,105 +245,144 @@ function renderNeuralNetwork (g, nn1) // GFX object, NeuralNetwork object
 }
 
 
-let update_net_lines = function(lines, nn1)
-{
-
-}
-
-
 export default function test2 () 
 {
     //-------------------------------------------------------------------------
     // GFX environment
     //-------------------------------------------------------------------------
     // Create environment
-    let g1 = new GFX('neuralnetcanvas');
-    let g2 = new GFX('infocanvas');
+    var g1 = new GFX('mycanvas1');
+    var g2 = new GFX('mycanvas2');
 
     // Info data
     var str1, str2, str3;
-    g2.font = "18px Arial"
+    g2.font = "22px Arial"
     str1 = new g2.Text("Iteration: " + (0) + ".", 20, 40);
     str3 = new g2.Text("Epoch: " + (0) + ".", 20, 80);
     str2 = new g2.Text("Batch cost (SMA50): " + (0.0) + ".", 20, 120);
 
+    g1.dragAndDrop(true);
+    g2.dragAndDrop(true);
+
+    // var poly1 = new g1.Polygon(500,180, 650,260, 650,360, 600,290, 500,360);
+    // poly1.style(g1.FILL);
+    // poly1.color(0,255,255);
+    // poly1.renderBorder(true);
+    // // poly1.renderBoundingBox(true);
+    // poly1.renderCenter(true);
+    // poly1.alpha(0.3);
+
+    // var poly2 = new g1.Polygon(500,180, 650,260, 650,360, 600,290, 500,360);
+    // poly2.style(g1.FILL);
+    // poly2.color(0,255,255);
+    // poly2.renderBorder(true);
+    // // poly2.renderBoundingBox(true);
+    // poly2.renderCenter(true);
+    // poly2.alpha(0.3);
+
     g1.render();
     g2.render();
+
+    // var i = 1;
+    // var anim1 = setInterval(function(){
+    //     i++;
+    //     if (poly2._inclination <= 90) {
+    //         var inc = poly2.inclination();
+    //         poly2.inclination(inc + 1);
+    //         g1.updateScreen();
+    //     }
+    //     if (i >= 90) {
+    //         clearInterval(anim1);
+    //     }
+    // }, 50);
     //-------------------------------------------------------------------------
+
+    let chartjs_ctx = document.getElementById('myChart').getContext('2d');
 
     console.log("Getting data...");
     let dataset = dt.dat_get_diabetes_dataset(Diabetes);
-    let dataset_clone = dt.dat_clone_dataset(dataset);
-    dt.dat_preprocess(dataset_clone);
-    dt.dat_normalize(dataset_clone);
-    dt.dat_shuffle(dataset_clone);
-    let splitted = dt.dat_split_train_test(dataset_clone);
-    let train_data = splitted.train;
-    let test_data = splitted.test;
-    train_data.batch_size = 32;
+    dataset.batch_size = 54;
+    let normalized_dataset = dt.dat_clone_dataset(dataset);
+    dt.dat_normalize(normalized_dataset);
 
-    let nn1 = new nn.NeuralNetwork([8, 8, 8, 8, 1]);
+    console.log('dataset:', dataset);
+    console.log('normalized_dataset:', normalized_dataset);
+    console.log("Number of samples:", dataset.size);
+    console.log("dataset memory: " + dt.dat_get_mem(dataset)/(1024.0*1024.0) + " MB");
+
+    dt.dat_shuffle(normalized_dataset);
+
+    let nn1 = new nn.NeuralNetwork([8, 1]);
     console.log(nn1);
-    let iterations = 30000;
+    let iterations = 50000;
 
     renderNeuralNetwork(g1, nn1);
 
     // Animation timer
     let xData  = [];
+    // for (let k = 0; k < iterations/25; k++)
+    //     xData.push(k);
     let yData1 = [];
     let yData2 = [];
-    let yData3 = [];
-    let yData4 = [];
     let it = 0;
     let animation = setInterval(function(){
-        if (it < iterations) 
+        if (it < iterations) // Set animation frame
         {
-            // Backprop one minibatch
-            nn.nn_backpropagation_sgd (nn1, train_data, 1);
+            //	+----------------------+
+            //	| ANIMATION FRAME CODE |
+            //	+----------------------+
+            //==============================================================
+            nn.nn_backpropagation_sgd (
+                nn1, 
+                normalized_dataset,
+                1
+            );
 
-            // Update net lines
+            //Update net lines --------------------------------------------
             g1.updateScreen();
+            //--------------------------------------------------------------
 
-            // Update info 
-            str1.text("Iteration: " + train_data.current_iteration);
-            str3.text("Epoch: " + train_data.current_epoch);
-            if (yData3.length > 0 && yData4.length > 0)
-                str2.text("train: " + yData3[yData3.length-1].toFixed(3) 
-                    + '       test: ' + yData4[yData4.length-1].toFixed(3)
-                );
+            // Update info -------------------------------------------------
+            let cost_mean = 
+                normalized_dataset.cost_sum / normalized_dataset.current_iteration;
+            str1.text("Iteration: " + normalized_dataset.current_iteration );
+            str3.text("Epoch: " + normalized_dataset.current_epoch);
+            str2.text("Cost mean: " + cost_mean.toFixed(6));
             g2.updateScreen();
+            //--------------------------------------------------------------
 
-            // Draw charts 
+            // Draw chart --------------------------------------------------
             if (it % 50 == 0) {
                 xData.push(it+1);
-                yData1.push(train_data.last_batch_cost);
+                yData1.push(normalized_dataset.last_batch_cost);
                 let sma50 = 0.0;
                 for (let k = 1; k <= Math.min(50, yData1.length); k++)
                     sma50 += yData1[yData1.length-k];
                 sma50 /= Math.min(50, yData1.length);
                 yData2.push(sma50);
-                drawChart(xData, yData1, yData2, train_data.batch_size * 0.5, 
-                    'costcanvas', 'cost', 'Batch cost (%50)', 'SMA50'
-                );
-
-                let output_train = nn.nn_feed_forward(nn1, train_data.X);
-                let accuracy_train = dt.dat_accuracy(train_data, output_train)
-                let output_test = nn.nn_feed_forward(nn1, test_data.X);
-                let accuracy_test = dt.dat_accuracy(test_data, output_test)
-                yData3.push(accuracy_train);
-                yData4.push(accuracy_test);
-                drawChart(xData, yData3, yData4, 1.0, 
-                    'accuracycanvas', 'accuracy', 'Accuracy (train)', 'Accuracy (test)'
-                );
+                drawChart(xData, yData1, yData2, iterations);
             }
+            //--------------------------------------------------------------
+            //==============================================================
 
             it += 1;
-        }
+        } // if (it < iterations)
         else // Callback for the end of the animation
         {
+            // Callback here
+            //--------------------------------------------------------------
+            str3.text("Final cost: " + normalized_dataset.last_batch_cost.toFixed(6) + ".");
+            g2.updateScreen();
+
             console.log(nn1);
-            let output = nn.nn_feed_forward(nn1, test_data.X);
-            console.log('accuracy:', dt.dat_accuracy(test_data, output));
+
+            //-------------------------------------------
+            // TESTING
+            //-------------------------------------------
+            if (true) {
+                // ...
+            }// if (true) { (TESTING)
+            //--------------------------------------------------------------
 
             clearInterval(animation);
         }

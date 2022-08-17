@@ -92,13 +92,9 @@ export default function GFX (canvasId)
         } 
         else if (arguments.length == 1) {
             this.canvas = document.getElementById(canvasId);
+            this.width = parseInt(this.canvas.width);
+            this.height = parseInt(this.canvas.height);
             this.context = this.canvas.getContext('2d');
-            // this.width = parseInt(this.canvas.width);
-            // this.height = parseInt(this.canvas.height);
-            this.context.canvas.width  = this.canvas.parentNode.clientWidth;
-            this.context.canvas.height = this.canvas.parentNode.clientHeight;
-            this.width = this.context.canvas.width;
-            this.height = this.context.canvas.height;
         } 
         else {
             throw 'Wrong arguments. Could not create GFX object.'

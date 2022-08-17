@@ -1,0 +1,43 @@
+body {
+  background-color: white;
+}
+
+.hello {
+  font-weight: bold;
+  /* color: red; */
+  /* background: url('../img/icon.png'); */
+}
+
+canvas {
+  border: 1px solid black;
+}
+
+.mycanvas1 {
+  border: 1px solid black;
+  /* width: 740px; */
+  /* height: 480px; */
+}
+
+.mycanvas2 {
+  position: absolute;
+  top: 26px;
+  left: 800px;
+  width: 360px;
+  height: 120px;
+}
+
+.myChart {
+  position:absolute;
+  top: 156px;
+  left: 800px;
+  width: 480px;
+  height: 260px;
+}
+
+.myChart2 {
+  position:absolute;
+  top: 410px;
+  left: 800px;
+  width: 480px;
+  height: 255px;
+}

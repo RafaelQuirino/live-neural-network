@@ -1,9 +1,3 @@
-import dt from '../neuralnet/data.js';
-import Diabetes from '../../data/diabetes.csv';
-import nn from '../neuralnet/neuralnet.js';
-import GFX from '../GFXjs/GFX.js';
-import '../assets/css/style.css';
-
 import {
     Chart,
     ArcElement,
@@ -31,7 +25,6 @@ import {
     Tooltip,
     SubTitle
 } from 'chart.js';
-import { max } from 'lodash';
   
 Chart.register(
     ArcElement,
@@ -60,6 +53,11 @@ Chart.register(
     SubTitle
 );
 
+import la from './neuralnet/linalg.js';
+
+
+const SYNAPSE_SIZE_FACTOR = 5.0;
+
 
 function drawChart (xData, yData1, yData2, max, canvasId, divId, label1, label2)
 {
@@ -73,7 +71,7 @@ function drawChart (xData, yData1, yData2, max, canvasId, divId, label1, label2)
 
     let ctx = document.getElementById(canvasId);
     
-    let myChart = new Chart(ctx, {
+    new Chart(ctx, {
         type: 'line',
         data: {
             labels: xData,
@@ -130,7 +128,7 @@ function drawChart (xData, yData1, yData2, max, canvasId, divId, label1, label2)
 }
 
 
-function renderNeuralNetwork (g, nn1) // GFX object, NeuralNetwork object
+function renderNeuralNetwork (g, nn1, features_names) // GFX object, NeuralNetwork object
 {
     g.clear();
 
@@ -140,11 +138,11 @@ function renderNeuralNetwork (g, nn1) // GFX object, NeuralNetwork object
     // Graphics parameters
     let numlanes = nn1.nlayers;
     let lanewidth = g.width / numlanes;
-    let vpadding = 40;
+    let vpadding = 20;
     let yi = vpadding, yf = g.height - vpadding;
     let uheight = yf - yi;
-    let inputvportion = 0.4;
-    let inputwportion = 0.2;
+    let inputvportion = 0.5;
+    let inputwportion = 0.25;
     let neuronmaxradius = 16;
     
     // Lanes middle points (x values)
@@ -158,48 +156,6 @@ function renderNeuralNetwork (g, nn1) // GFX object, NeuralNetwork object
         xvalues.push(currx);
     }
 
-    console.log('xvalues:', xvalues);
-
-    //===================================================================================
-    // +--------------------------------+
-    // | DEVELOPMENT                    |
-    // | Drawing lanes and middle lines |
-    // +--------------------------------+
-    //===================================================================================
-    if (true) {
-        let lanes = [];
-        for (let i = 0; i < numlanes; i++) {
-            lanes.push(new g.Rectangle(i*lanewidth,0, lanewidth-1,g.height-1));
-            lanes[i].color(255, 0, 0);
-        }
-
-        let lines = [];
-        for (let i = 0; i < numlanes; i++) {
-            lines.push(new g.Line(xvalues[i],vpadding, xvalues[i],g.height-vpadding));
-            lines[i].color(0, 255, 0);
-        }
-        
-        // Input rectangle
-        let halfwidth = lanewidth * 0.5 * inputwportion;
-        let x = xvalues[0] - halfwidth;
-        let y = vpadding + uheight * (1.0-inputvportion) * 0.5;
-        let r = new g.Rectangle(x, y, halfwidth * 2, uheight* inputvportion);
-        r.color(0, 0, 255);
-
-        // Hidden layers rectangles
-        for (let i = 1; i < nn1.topology.length - 1; i++) {
-            console.log('Layer ' + i + ': ' 
-                + (nn1.topology[i] * neuronmaxradius * 3 + neuronmaxradius) + ', '
-                + (uheight)
-            );
-            let xhid = xvalues[i] - halfwidth;
-            let yhid = vpadding ;
-            let rhid = new g.Rectangle(xhid, yhid, halfwidth * 2, uheight);
-            rhid.color(0, 0, 255);
-        }
-    }
-    //===================================================================================
-
     function createInputRect (gfx, x, y, width, height) {
         let rect = new gfx.Polygon(
             x, y, 
@@ -211,6 +167,7 @@ function renderNeuralNetwork (g, nn1) // GFX object, NeuralNetwork object
         rect.renderBorder(true);
         rect.borderColor(0, 0, 0);
         rect.color(255, 255, 255);
+        rect.borderThickness(2);
 
         return rect
     }
@@ -241,6 +198,11 @@ function renderNeuralNetwork (g, nn1) // GFX object, NeuralNetwork object
                 side
             )
         });
+
+        g.font = "10px Arial";
+        let t = new g.Text(features_names[i], (xvalues[0] - side * 0.5) - 40, curry - 2);
+        t.bringToTop();
+
         curry += inputheight * 0.5;
     }
 
@@ -248,24 +210,64 @@ function renderNeuralNetwork (g, nn1) // GFX object, NeuralNetwork object
     let maxnumneurons = Math.max(...nn1.topology);
     if (maxnumneurons * neuronmaxradius * 3 + neuronmaxradius > uheight)
         neuronmaxradius = uheight / (3 * maxnumneurons + 1);
+    let last_neurons = [];
+    for (let i = 0; i < inputs.length; i++) {
+        last_neurons.push({
+            x: inputs[i].center.x,
+            y: inputs[i].center.y,
+            shape: inputs[i].rect
+        });
+    }
+
     for (let i = 1; i < nn1.topology.length - 1; i++) {
         layers.push({
             neurons: [],
             synapses: []
         });
+
         let numneurons = nn1.topology[i];
         let hx = xvalues[i];
         let hy = vpadding + neuronmaxradius * 2;
+        let uheighthid = uheight;
         if (numneurons * neuronmaxradius * 3 + neuronmaxradius >= uheight) {
             uheighthid = numneurons * neuronmaxradius * 3 + neuronmaxradius;
         }
         hy += 0.5 * (uheight - (numneurons * neuronmaxradius * 3 + neuronmaxradius));
+        
         // First draw synapses
-        for (let j = 0; j < nn1.topology[j]; j++) {
-            // let p1;
-            // if (j == 0)
+        for (let j = 0; j < last_neurons.length; j++) {
+            let hysyn = hy;
+            for (let k = 0; k < numneurons; k++) {
+                let line = new g.Line (
+                    last_neurons[j].x, 
+                    last_neurons[j].y,
+                    hx,
+                    hysyn
+                );
+                let weight = la.vec_get(nn1.W[i-1], j, k);
+				if (weight >= 0) {
+					line.color(26,148,49);
+					line.alpha(0.7);
+				}
+				else if (weight < 0) 	{
+					line.color(231,76,60);
+					line.alpha(0.7);
+				}
+				line.thickness(Math.log10(Math.abs(weight) * SYNAPSE_SIZE_FACTOR));
+
+                layers[layers.length-1].synapses.push(line);
+                
+                hysyn += neuronmaxradius * 3;
+            }
         }
+
+        // And make each last neuron to bringToTop()
+        for (let j = 0; j < last_neurons.length; j++) {
+            last_neurons[j].shape.bringToTop();
+        }
+
         // And then draw the neurons
+        last_neurons = [];
         for (let j = 0; j < numneurons; j++) {
             let hidneuron = new g.Circle(
                 hx, 
@@ -278,11 +280,52 @@ function renderNeuralNetwork (g, nn1) // GFX object, NeuralNetwork object
             hidneuron.borderColor(0, 0, 0);
             hidneuron.borderThickness(1);
             
+            last_neurons.push({
+                x: hx,
+                y: hy,
+                shape: hidneuron
+            });
+
+            layers[layers.length-1].neurons.push(hidneuron);
+            
             hy += neuronmaxradius * 3;
         }
     }
 
     // Rendering output layer
+    layers.push({
+        neurons: [],
+        synapses: []
+    });
+
+    // Output synapses
+    for (let j = 0; j < last_neurons.length; j++) {
+        let line = new g.Line (
+            last_neurons[j].x, 
+            last_neurons[j].y,
+            xvalues[xvalues.length - 1], 
+            yi + uheight * 0.5,
+        );
+        let weight = la.vec_get(nn1.W[nn1.topology.length-2], j, 0);
+        if (weight >= 0) {
+            line.color(26,148,49);
+            line.alpha(0.7);
+        }
+        else if (weight < 0) 	{
+            line.color(231,76,60);
+            line.alpha(0.7);
+        }
+        line.thickness(Math.log10(Math.abs(weight) * SYNAPSE_SIZE_FACTOR));
+
+        layers[layers.length-1].synapses.push(line);
+    }
+
+    // And make each last neuron to bringToTop()
+    for (let j = 0; j < last_neurons.length; j++) {
+        last_neurons[j].shape.bringToTop();
+    }
+
+    // Output neurons
     let outputneuron = new g.Circle(
         xvalues[xvalues.length - 1], 
         yi + uheight * 0.5, 
@@ -294,111 +337,41 @@ function renderNeuralNetwork (g, nn1) // GFX object, NeuralNetwork object
     outputneuron.borderColor(0, 0, 0);
     outputneuron.borderThickness(1);
 
+    layers[layers.length-1].neurons.push(outputneuron);
+
     g.render();
+
+    return layers;
 }
 
 
-let update_net_lines = function(lines, nn1)
+let update_net_lines = function(layers, nn1)
 {
-
-}
-
-
-export default function test2 () 
-{
-    //-------------------------------------------------------------------------
-    // GFX environment
-    //-------------------------------------------------------------------------
-    // Create environment
-    let g1 = new GFX('neuralnetcanvas');
-    let g2 = new GFX('infocanvas');
-
-    // Info data
-    var str1, str2, str3;
-    g2.font = "18px Arial"
-    str1 = new g2.Text("Iteration: " + (0) + ".", 20, 40);
-    str3 = new g2.Text("Epoch: " + (0) + ".", 20, 80);
-    str2 = new g2.Text("Batch cost (SMA50): " + (0.0) + ".", 20, 120);
-
-    g1.render();
-    g2.render();
-    //-------------------------------------------------------------------------
-
-    console.log("Getting data...");
-    let dataset = dt.dat_get_diabetes_dataset(Diabetes);
-    let dataset_clone = dt.dat_clone_dataset(dataset);
-    dt.dat_preprocess(dataset_clone);
-    dt.dat_normalize(dataset_clone);
-    dt.dat_shuffle(dataset_clone);
-    let splitted = dt.dat_split_train_test(dataset_clone);
-    let train_data = splitted.train;
-    let test_data = splitted.test;
-    train_data.batch_size = 32;
-
-    let nn1 = new nn.NeuralNetwork([8, 8, 8, 8, 1]);
-    console.log(nn1);
-    let iterations = 30000;
-
-    renderNeuralNetwork(g1, nn1);
-
-    // Animation timer
-    let xData  = [];
-    let yData1 = [];
-    let yData2 = [];
-    let yData3 = [];
-    let yData4 = [];
-    let it = 0;
-    let animation = setInterval(function(){
-        if (it < iterations) 
-        {
-            // Backprop one minibatch
-            nn.nn_backpropagation_sgd (nn1, train_data, 1);
-
-            // Update net lines
-            g1.updateScreen();
-
-            // Update info 
-            str1.text("Iteration: " + train_data.current_iteration);
-            str3.text("Epoch: " + train_data.current_epoch);
-            if (yData3.length > 0 && yData4.length > 0)
-                str2.text("train: " + yData3[yData3.length-1].toFixed(3) 
-                    + '       test: ' + yData4[yData4.length-1].toFixed(3)
-                );
-            g2.updateScreen();
-
-            // Draw charts 
-            if (it % 50 == 0) {
-                xData.push(it+1);
-                yData1.push(train_data.last_batch_cost);
-                let sma50 = 0.0;
-                for (let k = 1; k <= Math.min(50, yData1.length); k++)
-                    sma50 += yData1[yData1.length-k];
-                sma50 /= Math.min(50, yData1.length);
-                yData2.push(sma50);
-                drawChart(xData, yData1, yData2, train_data.batch_size * 0.5, 
-                    'costcanvas', 'cost', 'Batch cost (%50)', 'SMA50'
-                );
-
-                let output_train = nn.nn_feed_forward(nn1, train_data.X);
-                let accuracy_train = dt.dat_accuracy(train_data, output_train)
-                let output_test = nn.nn_feed_forward(nn1, test_data.X);
-                let accuracy_test = dt.dat_accuracy(test_data, output_test)
-                yData3.push(accuracy_train);
-                yData4.push(accuracy_test);
-                drawChart(xData, yData3, yData4, 1.0, 
-                    'accuracycanvas', 'accuracy', 'Accuracy (train)', 'Accuracy (test)'
-                );
+    for (let k = 0; k < layers.length; k++) {
+        let numlastneurons = k === 0 ? 8 : layers[k-1].neurons.length;
+        let numneurons = layers[k].neurons.length;
+        let currsynapse = 0;
+        for (let i = 0; i < numlastneurons; i++) {
+            for (let j = 0; j < numneurons; j++) {
+                let line = layers[k].synapses[currsynapse++];
+                let weight = la.vec_get(nn1.W[k], i, j);
+                if (weight >= 0) {
+					line.color(26,148,49);
+					line.alpha(0.7);
+				}
+				else if (weight < 0) 	{
+					line.color(231,76,60);
+					line.alpha(0.7);
+				}
+				line.thickness(Math.log10(Math.abs(weight) * SYNAPSE_SIZE_FACTOR));
             }
-
-            it += 1;
         }
-        else // Callback for the end of the animation
-        {
-            console.log(nn1);
-            let output = nn.nn_feed_forward(nn1, test_data.X);
-            console.log('accuracy:', dt.dat_accuracy(test_data, output));
+    }
+}
 
-            clearInterval(animation);
-        }
-    }, 1);
+
+export default {
+    drawChart: drawChart,
+    renderNeuralNetwork: renderNeuralNetwork,
+    update_net_lines: update_net_lines
 };

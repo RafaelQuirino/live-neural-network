@@ -1,6 +1,5 @@
 import ut from './util.js';
 import la from './linalg.js';
-import _ from 'lodash';
 
 
 let dt_constants = {
@@ -69,6 +68,19 @@ let dat_clone_dataset = function(dataset)
 }
 
 
+// let dat_export = function(data, fname) // Dataset, string
+// {
+//     // TODO
+// }
+
+
+// let dat_import = function (fname) // string; Returns Dataset
+// {
+//     // TODO
+//     return NULL;
+// }
+
+
 let dat_get_mem = function (data) // Dataset
 {
     let mem = 8 * 8;
@@ -76,67 +88,6 @@ let dat_get_mem = function (data) // Dataset
     mem += la.vec_get_mem(data.Y);
 
     return mem;
-}
-
-
-let dat_preprocess = function (data) // Dataset
-{
-    // Fix missing values
-    let sums_0 = _.fill(Array(data.X.n), 0.0);
-    let sums_1 = _.fill(Array(data.X.n), 0.0);
-    let quant_0 = 0;
-    let quant_1 = 0;
-    for (let i = 0; i < data.X.m; i++) {
-        let is1row = false;
-        if (la.vec_get(data.Y, i, 0) === 0)
-            quant_0++;
-        else {
-            quant_1++;
-            is1row = true;
-        }
-        for (let j = 0; j < data.X.n; j++) {
-            if (is1row)
-                sums_1[j] += la.vec_get(data.X, i, j);
-            else
-                sums_0[j] += la.vec_get(data.X, i, j);
-        }
-    }
-    for (let i = 0; i < data.X.m; i++) {
-        for (let j = 0; j < data.X.n; j++) {
-            if (la.vec_get(data.X, i, j) === 0) {
-                if (la.vec_get(data.Y, i, j) === 0) {
-                    la.vec_set(data.X, i, j, sums_0[j] / quant_0);
-                }
-                else {
-                    la.vec_set(data.X, i, j, sums_1[j] / quant_1);
-                }
-            }
-        }
-    }
-
-    // Fix outliers
-    let low_limits = {
-        "SkinThickness": -15.0,
-        "Insulin": -147.5,
-        "DiabetesPedigreeFunction": -0.9054,
-    };
-    let up_limits = {
-        "SkinThickness": 73.0,
-        "Insulin": 424.5,
-        "DiabetesPedigreeFunction": 1.949,
-    };
-    for (let i = 0; i < data.X.m; i++) {
-        for (let j = 0; j < data.X.n; j++) {
-            if (low_limits[data.features_names[j]]) {
-                if (la.vec_get(data.X, i, j) < low_limits[data.features_names[j]]) {
-                    la.vec_set(data.X, i, j, low_limits[data.features_names[j]]);
-                }
-                if (la.vec_get(data.X, i, j) > up_limits[data.features_names[j]]) {
-                    la.vec_set(data.X, i, j, up_limits[data.features_names[j]]);
-                }
-            }
-        }
-    }
 }
 
 
@@ -208,6 +159,47 @@ let dat_add_noise = function (datavec) // Vec2D
 }
 
 
+//-----------------------------------------------------------------------------
+// Different types of exporting/importing datasets
+//-----------------------------------------------------------------------------
+// dataset_t* dat_import_array (
+//     vec_type_t** features_arr, vec_type_t** labels_arr,
+//     int features_num_rows, int features_num_columns,
+//     int labels_num_rows,   int labels_num_columns
+// )
+// {
+//     return NULL;
+// }
+
+
+
+// void dat_import_features (const char* features_file)
+// {
+
+// }
+
+
+// void dat_import_labels (const char* labels_file)
+// {
+
+// }
+
+
+
+// void dat_import_features_array (vec_type_t** features_arr, int rows, int columns)
+// {
+
+// }
+
+
+
+// void dat_import_labels_array (vec_type_t** labels_arr, int rows, int columns)
+// {
+
+// }
+//-----------------------------------------------------------------------------
+
+
 let dat_shuffle = function (data) // Dataset
 {
     let n = data.X.m;
@@ -225,6 +217,12 @@ let dat_shuffle = function (data) // Dataset
         la.vec_swap_rows(data.Y, i, j);
     }
 }
+
+
+// void dat_repeat (dataset_t* data)
+// {
+//     // TODO
+// }
 
 
 let dat_next_minibatch = function (data) // Dataset; returns Minibatch
@@ -274,50 +272,7 @@ let dat_get_diabetes_dataset = function(Diabetes)
         }
     }
 
-    console.log('dataset:', dataset);
-
     return dataset;
-}
-
-
-let dat_split_train_test = function(dataset, train_ratio=0.8)
-{
-    let train = new Dataset(), test = new Dataset();
-    train.features_names = [...dataset.features_names];
-    train.target_name    = dataset.target_name;
-    test.features_names = [...dataset.features_names];
-    test.target_name    = dataset.target_name;
-
-    let offset = Math.trunc(dataset.size * train_ratio);
-
-    train.X = la.vec_clone_portion(dataset.X, 0, offset);
-    train.Y = la.vec_clone_portion(dataset.Y, 0, offset );
-    train.size = offset;
-    test.X = la.vec_clone_portion(dataset.X, offset, dataset.size - offset);
-    test.Y = la.vec_clone_portion(dataset.Y, offset, dataset.size - offset);
-    test.size = dataset.size - offset;
-
-    return {
-        train: train,
-        test: test
-    }
-}
-
-
-let dat_accuracy = function(dataset, output)
-{
-    let threshold = 0.5;
-    let num_correct = 0;
-    for (let i = 0; i < dataset.size; i++) {
-        let y = la.vec_get(dataset.Y, i, 0);
-        let yhat = la.vec_get(output, i, 0);
-        if ((y == 1 && yhat >= threshold)
-            || (y == 0 && yhat < threshold)
-        )
-            num_correct += 1;
-    }
-
-    return num_correct / dataset.size;
 }
 
 
@@ -327,13 +282,10 @@ export default {
     Minibatch: Minibatch,
     dat_clone_dataset: dat_clone_dataset,
     dat_get_mem: dat_get_mem,
-    dat_preprocess: dat_preprocess,
     dat_normalize: dat_normalize,
     dat_normalize_max: dat_normalize_max,
     dat_add_noise: dat_add_noise,
     dat_shuffle: dat_shuffle,
     dat_next_minibatch: dat_next_minibatch,
-    dat_get_diabetes_dataset: dat_get_diabetes_dataset,
-    dat_split_train_test: dat_split_train_test,
-    dat_accuracy: dat_accuracy
+    dat_get_diabetes_dataset: dat_get_diabetes_dataset
 };
